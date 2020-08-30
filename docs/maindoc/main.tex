@@ -1,0 +1,473 @@
+\documentclass{article}
+
+\usepackage[utf8]{inputenc} 
+\usepackage[english]{babel} 
+\usepackage{csquotes}
+\usepackage[a4paper, total={6.5in, 10in}, top=25mm]{geometry} 
+\usepackage[hidelinks]{hyperref}
+
+\usepackage{minted}
+\usemintedstyle{emacs}
+\definecolor{bg}{RGB}{254, 255, 235}
+
+
+\title{\texttt{libll} Manual}
+\author{Nebhrajani A.}
+\date{2020}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\newpage
+
+\section{Introduction}
+\texttt{libll} is a linked list library (API) for C. It provides creation, node addition/deletion,
+printing, searching, sorting, appending to, and destruction of a linked list.
+
+\section{Installation}
+
+\subsection{Prerequisites}
+To use \texttt{libll}, you should have the latest version of \texttt{gcc} or equivalent C compiler.
+
+\subsection{Installation}
+To install \texttt{libll} using \texttt{gcc}, the recommended way is to use a shared library. First \texttt{cd} into the directory where you want to install. Then:
+\begin{verbatim}
+$ gcc -c -fpic /src/libll.c
+$ gcc -shared -o libll.so libll.o
+\end{verbatim}
+
+You may need to add this path to the \verb|$LD_LIBRARY_PATH| variable:
+\begin{verbatim}
+$ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/your/path
+\end{verbatim}
+Add this line to your\texttt{~/.bashrc} if you want the variable definition to be permanent across sessions.
+\begin{verbatim}
+$ echo 'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/your/path/' >> ~/.bashrc
+\end{verbatim}
+
+\fbox {
+  \begin{minipage}{0.9\linewidth} {\textbf{Note:} Alternatively, you can use the \texttt{ldconfig} utility.}
+    \label{key}
+  \end{minipage} }
+
+\subsection{Runtime libraries}
+If you haven't used \texttt{ldconfig}, you'll need to tell the linker explicitly where to look for \texttt{libll} at runtime using the \texttt{-L} option, like so:
+\begin{verbatim}
+$ gcc -L /your/path -o program.c -lll
+\end{verbatim}
+
+
+\section{Functions}
+
+\subsection{\texttt{lladd}}
+
+\begin{verbatim}
+ll *lladd(ll *_list, void *_data) 
+\end{verbatim}
+
+\paragraph{Description}
+Adds an element to a list. If list doesn't exist, creates anew.
+
+\paragraph{Arguments}
+\verb| |\\
+\verb|ll *_list|: Linked list to add to or create.\\
+\verb|void *_data|: Pointer to your struct. 
+
+\paragraph{Returns}
+
+A pointer to the new list or the pointer to the list added to.
+
+\paragraph{How to use}
+
+To use \verb|lladd|, you need to do the \verb|malloc| on your own, add data, and pass the pointer to \verb|lladd|.
+
+\begin{enumerate}
+\item Create a \verb|struct| for the data you want to store.\\
+  
+\fbox {
+  \begin{minipage}{0.9\linewidth} {\textbf{Note:} You need to include a unique comparable data type in
+      your struct (passed as \texttt{\_key} to \texttt{libll}) to be able to
+      \hyperref[llsearch]{search} and \hyperref[lldelete]{delete}. This data
+      type acts as a \textbf{primary key}.}
+    \label{key}
+  \end{minipage} }
+
+\vspace{8pt}
+
+Something like this will do:\\[8pt]
+\begin{minted}[linenos, bgcolor = bg]{c}
+typedef struct user 
+{
+  int key;
+  int y;
+  float z;
+} usr;
+\end{minted}
+
+\vspace{5pt}
+
+Here, \verb|key| is a unique integer.
+
+\item Write your own add function. First \verb|malloc| as much space as you need, and fill up your
+data. Then pass the pointer to \verb|lladd|, like this:\\[5pt]
+\begin{minted}[linenos, bgcolor = bg]{c}
+ll *my_add(ll *pX, int key, int y, float z)
+{
+  usr *mydata = NULL;
+  
+  if ((mydata = (usr *)malloc(sizeof(usr))) == 0) {
+    fprintf(stderr, "Unable to allocate memory. Fatal\n");
+    exit(1);
+  }
+
+  mydata->key = key;
+  mydata->y = y;
+  mydata->z = z;
+
+  pX = lladd(pX, mydata);
+
+  return pX;
+}
+\end{minted}
+% \newpage
+\item Add elements to your new linked list in \verb|main()|.\\[8pt]
+\begin{minted}[linenos, bgcolor = bg]{c}
+  pX = my_add(pX,  1, 123, 123.14);
+  pX = my_add(pX,  2, 456,  24.15);
+  pX = my_add(pX,  3, 510, 115.43);
+  pX = my_add(pX,  4, 910,  15.43);
+  pX = my_add(pX,  5, 130, 215.43);
+  pX = my_add(pX,  6, 150, 125.43);
+  pX = my_add(pX,  7, 105, 165.43);
+  pX = my_add(pX,  8, 210, 154.73);
+  pX = my_add(pX,  9, 101, 155.43);
+  pX = my_add(pX, 10, 410, 145.43);
+  pX = my_add(pX, 11, 180, 185.43);
+  pX = my_add(pX, 12, 109, 158.43);
+\end{minted}
+\end{enumerate}
+
+\subsection{\texttt{llprint}}
+\label{llprint}
+\begin{verbatim}
+void llprint(ll *_list, char *(* usr_print)(void *_data)) 
+\end{verbatim}
+
+\paragraph{Description}
+
+Prints list.
+
+\paragraph{Arguments}
+\verb| |\\
+\verb|ll *_list|: List to be printed.\\
+\verb|char *(* usr_print)(void *_data)|: Pointer to your print function.
+
+\paragraph{Returns}
+
+Void.
+
+\paragraph{How to use}
+
+To print the list, you need to tell \verb|llprint| \emph{how} you want the list printed. Create and
+pass to \verb|llprint| a pointer to your print function. Your print function needs to accept a
+pointer to your struct as an argument and return a formatted string. \verb|llprint| will call this
+function iteratively and print the list.
+
+\begin{enumerate}
+\item Write your print function, something like the following:\\[8pt]
+\begin{minted}[linenos, bgcolor = bg]{c}
+char *my_print(usr *this)
+{
+  static char s[80];
+  sprintf(s, "key = %d, y = %d, z = %0.2f\n", this->key, this->y, this->z);
+  return s;
+}
+\end{minted}
+
+\item In \verb|main()| create a function pointer to your print function and pass it to \verb|llprint|, like this:\\[8pt]
+\begin{minted}[linenos, bgcolor = bg]{c}
+  char *(*print)(usr*) = my_print;
+  llprint(pX, (char *(*)(void *))print);
+\end{minted}
+\end{enumerate}
+
+\subsection{\texttt{llsort}}
+\label{llsort}
+\verb|ll *llsort(ll *_list, int (* usr_compare)(void *_data1, void *_data2))|
+
+\paragraph{Description}
+Sorts list based on input compare function.
+
+\paragraph{Arguments}
+\verb| |\\
+\verb|ll *_list|: List to be sorted.\\
+\verb|int (* usr_compare)(void *_data1, void *_data2)|: Pointer to your compare function. 
+
+\paragraph{Returns}
+
+Pointer to sorted list.
+
+\paragraph{How to use}
+
+Pass \verb|llsort| a pointer to your compare function (see below). It will return a pointer to the
+sorted list. 
+
+\begin{enumerate}
+\item Write a comparison function. It should take two pointers to two of your structs, compare
+  whichever data you want to, and return values similar to the standard function \verb|strcmp|.
+  One way of doing this is:\\[8pt]
+\begin{minted}[linenos, bgcolor = bg]{c}
+int my_cmp(usr *mydata1, usr *mydata2)
+{
+  int a = 0;
+  int b = 0;
+  
+  a = mydata1->y;
+  b = mydata2->y;
+  
+  if (a > b)
+    return 1;
+  else if (a < b)
+    return -1;
+  else
+    return 0;
+}
+\end{minted}
+\\[8pt]
+\fbox{
+  \begin{minipage}{0.9\linewidth} {\textbf{Note:} To switch between ascending and descending sorts,
+      switch the returns \texttt{1} and \texttt{-1} in your compare function.}
+  \end{minipage} }
+\\
+
+\item In \verb|main()|, create a function pointer to your compare function and pass it to
+  \verb|llsort|, like so:\\[8pt]
+\begin{minted}[linenos, bgcolor = bg]{c}
+  int (*cmp)(usr *, usr *) = my_cmp;
+  pX = llsort(pX, (int (*)(void *, void *))cmp);
+\end{minted}
+\end{enumerate}
+
+\fbox{
+  \begin{minipage}{0.9\linewidth}
+    {
+      \textbf{Note:} \hyperref[llsort]{\texttt{llsort}} uses an internal function
+      \texttt{\_lldelete} to only delete and replace the actual nodes in the linked list and not the
+      structs their \texttt{void *\_data}'s point to: it instead juggles the pointers without ever
+      touching your structures. \hyperref[llsort]{\texttt{llsort}} doesn't use
+      \hyperref[lldelete]{\texttt{lldelete}}, which is meant to delete both the node and the data
+      structure it points to.
+}
+  \end{minipage} }
+\\
+
+\subsection{\texttt{llprint\_single}}
+\label{llprintsingle}
+
+\verb|void llprint_single(ll *_this, char *(* usr_print)(void *_data))|\\[8pt]
+This function behaves the same as \hyperref[llprint]{\texttt{llprint}}, but only prints one element:
+it doesn't loop through the entire linked list. This is meant to be used with
+\hyperref[llsearch]{\texttt{llsearch}}. so that only the searched element is printed. 
+
+
+\subsection{\texttt{lldelete}}
+\label{lldelete}
+
+\begin{verbatim}
+ll *lldelete(ll *_list, int _key, int (* usr_compare_key)(void *_data, int key), 
+             void (* usr_free)(void *_data))
+\end{verbatim}
+
+\paragraph{Description}
+Deletes element from list.
+
+\paragraph{Arguments}
+\verb| |\\
+\verb|ll *_list|: Which list to delete from.\\
+\verb|int _key|: Unique identifier for which element to delete.\\
+\verb|int (* usr_compare_key)(void *_data, int key)|: Pointer to your key matching function.\\
+\verb|void (* usr_free)(void *_data)|: Pointer to your free function.
+
+\paragraph{Returns}
+
+Pointer to list with deleted element.
+
+\paragraph{How to use}
+
+\texttt{lldelete} needs to know which element you want to delete and from which list. It does this
+using the \hyperref[key]{\texttt{\_key}}. It also needs a way to check if the key has matched: necessitating you to
+write a key comparison function. Finally, only deleting the node is not enough, the data associated
+with it must also be freed. To do this, you'll have to write a free function. Each of these must be
+passed as an argument to \texttt{lldelete}.
+
+\begin{enumerate}
+\item Write a key comparison function. It should accept two pointers to your structures and return \texttt{0}
+  if the keys match. For example,\\[8pt]
+\begin{minted}[linenos, bgcolor = bg]{c}
+int my_key_cmp(usr *mydata, int key)
+{
+  int a = 0;
+  int b = 0;
+  
+  a = mydata->key;
+  b = key;
+  
+  if (a == b)
+    return 0;
+  else
+    return 1;
+}
+\end{minted}
+  
+\vspace{5pt}
+
+\fbox{
+  \begin{minipage}{0.9\linewidth}
+    {
+      \textbf{Note:}
+      If you're always sorting using the key, you can reuse the compare function you wrote for
+      sort. (\texttt{my\_cmp})
+    }
+  \end{minipage} }
+\\
+
+\item Write a free function. It accepts a pointer to your struct and frees it, like so:\\[8pt]
+\begin{minted}[linenos, bgcolor = bg]{c}
+
+void my_free(usr *mydata)
+{
+  if (mydata) {
+    free(mydata);
+  }
+}
+\end{minted}
+
+
+\item Call \texttt{lldelete} in \texttt{main()} with the required arguments and by declaring the pointers to the
+  functions you created earlier. \\[8pt]
+\begin{minted}[linenos, bgcolor = bg]{c}
+  int (*key_cmp)(usr *, int) = my_key_cmp;
+  void (*free)(usr *mydata) = my_free;
+  pX = lldelete(pX, 3, (int (*)(void *, int))key_cmp, (void (*)(void *))free);
+\end{minted}
+\end{enumerate}
+
+\subsection{\texttt{lldestroy}}
+\label{lldestroy}
+
+\verb|void lldestroy(ll *_list, void (* usr_free)(void *_data))|
+
+\paragraph{Description}
+Destroys entire list.
+
+\paragraph{Arguments}
+\verb| |\\
+\verb|ll *_list|: List to be destroyed.\\
+\verb|void (* usr_free)(void *_data)|: Pointer to free function.
+
+\paragraph{Returns}
+Void.
+
+\paragraph{How to use}
+
+lldestroy is in essence an lldelete which iterates through the entire list. To use it:\\[8pt]
+\begin{minted}[linenos, bgcolor = bg]{c}
+  lldestroy(pX, (void (*)(void *))free);
+\end{minted}
+
+\subsection{\texttt{llsearch}}
+\label{llsearch}
+\verb|ll *llsearch(ll *_list, int _key, int (* usr_compare_key)(void *_data, int key))|
+
+\paragraph{Description}
+Searches element in list.
+
+\paragraph{Arguments}
+\verb| |\\
+\verb|ll *_list|: Which list to search in.\\
+\verb|int _key|: Unique identifier for which element to search for.\\
+\verb|int (* usr_compare_key)(void *_data, int key)|: Pointer to key matching function.
+
+\paragraph{Returns}
+
+Pointer to the element if found. Otherwise, returns a \texttt{\texttt{NULL}} pointer.
+
+\paragraph{How to use}
+
+The usage is similar to \hyperref[lldelete]{\texttt{lldelete}}. However, \textbf{always store the result of
+the search in a new variable} of type \texttt{ll *}. If you don't, you'll overwrite the pointer to
+the original linked list. Print this new variable using
+\hyperref[llprintsingle]{\texttt{llprint\_single}}, like so:\\[8pt]
+\begin{minted}[linenos, bgcolor = bg]{c}
+  sX = llsearch(pX, 12, (int (*)(void *, int))key_cmp);
+  llprint_single(sX, (char *(*)(void *))print);
+\end{minted}
+
+\subsection{\texttt{llwhich}}
+
+\verb|int llwhich(ll *_list, int _key, int (* usr_compare_key)(void *_data, int key))|
+
+\paragraph{Description}
+Whichth node is element at?
+
+\paragraph{Arguments}
+\verb| |\\
+\verb|ll *_list|: Which list to count in.\\
+\verb|int _key|: Unique identifier for which element to count till.\\
+\verb|int (* usr_compare_key)(void *_data, int key)|: Pointer to key matching function.
+
+\paragraph{Returns}
+Integer.
+
+\paragraph{How to use}
+
+The use is the same as \hyperref[llsearch]{\texttt{llsearch}}:\\[8pt]
+\begin{minted}[linenos, bgcolor = bg]{c}
+  i = llwhich(pX, 12, (int (*)(void *, int))key_cmp);
+\end{minted}
+
+\subsection{\texttt{llappend}}
+
+\verb|ll *llappend(ll *_a, ll *_b)|
+
+\paragraph{Description}
+Appends to non-null list.
+
+\paragraph{Arguments}
+\verb| |\\
+\verb|ll *a|: List to append to.\\
+\verb|ll *b|: List to be appended.
+
+\paragraph{Returns}
+Pointer to appended list.
+
+\paragraph{How to use}
+
+Call \texttt{llappend} with the two lists you want to append. Note that you can't append to a
+\texttt{NULL} list, in which case \texttt{llappend} will return a \texttt{NULL} pointer.\\[8pt]
+\begin{minted}[linenos, bgcolor = bg]{c}
+pX = llappend(pX, qX);
+\end{minted}
+
+\vspace{5pt}
+
+
+\fbox{
+  \begin{minipage}{0.9\linewidth} {\textbf{Note:} To append more than two lists, you can call \texttt{llappend}
+      recursively. In fact, this is exactly how \hyperref[llsort]{\texttt{llsort}} appends lists.}
+  \end{minipage} }
+\\
+
+\section{License (MIT)}
+Copyright (c) 2020 Aditya Nebhrajani\\
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:\\
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.\\
+THE SOFTWARE IS PROVIDED ``AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+\section{Contact}
+Feel free to submit any ideas, questions, or problems by reporting an issue. Alternatively, you can
+reach out to me at \href{mailto:aditya.v.nebhrajani@gmail.com}{\texttt{\textless aditya.v.nebhrajani@gmail.com\textgreater}}.
+
+
+\end{document}
