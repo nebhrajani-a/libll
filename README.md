@@ -16,14 +16,6 @@ $ gcc -c -fpic /src/libll.c
 $ gcc -shared -o libll.so libll.o
 ```
 
-You may need to add this path to the `$LD_LIBRARY_PATH` variable:
-```
-$ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/your/path
-```
-Add this line to your `~/.bashrc` if you want the variable definition to be permanent across sessions.
-```
-$ echo 'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/your/path/' >> ~/.bashrc
-```
 > Alternatively, you can use the `ldconfig` utility.
 
 ### Runtime libraries
